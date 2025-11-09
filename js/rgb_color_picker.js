@@ -134,7 +134,7 @@ function drawHueRingAndSV(canvas, hueDeg, s, v, markers) {
         ctx.closePath();
         ctx.fill('evenodd');
     } else {
-        // Fallback: coarse pixel method
+        // Fallback: coarse pixel method (also align with -90° offset)
         const image = ctx.createImageData(w, h);
         for (let yy = 0; yy < h; yy++) {
             for (let xx = 0; xx < w; xx++) {
@@ -143,7 +143,8 @@ function drawHueRingAndSV(canvas, hueDeg, s, v, markers) {
                 const idx = (yy*w + xx) * 4;
                 if (dist <= outer && dist >= inner) {
                     let ang = Math.atan2(dy, dx);
-                    let hdeg = ang * 180 / Math.PI; if (hdeg < 0) hdeg += 360;
+                    let hdeg = ang * 180 / Math.PI - 90;  // align with conic gradient start
+                    if (hdeg < 0) hdeg += 360;
                     const [rr, gg, bb] = hsvToRgb(hdeg, 1, 1);
                     image.data[idx] = rr; image.data[idx+1] = gg; image.data[idx+2] = bb; image.data[idx+3] = 255;
                 } else {
@@ -194,9 +195,11 @@ function drawHueRingAndSV(canvas, hueDeg, s, v, markers) {
     // Markers
     const H = markers?.h ?? hueDeg; const S = markers?.s ?? s; const V = markers?.v ?? v;
     // hue marker in ring centerline
+    // H is already the canvas angle (from atan2 + 90), so subtract 90 to get back to standard angle
     const hr = inner + ringThickness / 2;
-    const hx = cx + hr * Math.cos(H * Math.PI / 180);
-    const hy = cy + hr * Math.sin(H * Math.PI / 180);
+    const hAngleRad = (H - 90) * Math.PI / 180;
+    const hx = cx + hr * Math.cos(hAngleRad);
+    const hy = cy + hr * Math.sin(hAngleRad);
     ctx.save(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
     // sv marker
     const svX = topLeftX + S * side;
@@ -307,7 +310,11 @@ function attachPicker(node) {
         const dist = Math.sqrt(dx * dx + dy * dy);
         // Hue ring region
         if (dist <= geometry.outer && dist >= geometry.inner) {
-            let ang = Math.atan2(dy, dx) * 180 / Math.PI; if (ang < 0) ang += 360;
+            // atan2 gives angle from right (0°), conic gradient starts at top (-90°)
+            // Canvas coord: right=0°, down=90°, left=180°, up=270°
+            // Color wheel: up=0° (red), so add 90° to convert canvas angle to hue
+            let ang = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+            if (ang < 0) ang += 360;
             h = ang;
             updatePreview();
             return true;
@@ -317,22 +324,27 @@ function attachPicker(node) {
             x >= geometry.topLeftX && x <= geometry.topLeftX + geometry.side &&
             y >= geometry.topLeftY && y <= geometry.topLeftY + geometry.side
         ) {
+            // relX, relY: 0..1 の相対座標
             const relX = (x - geometry.topLeftX) / geometry.side;
             const relY = (y - geometry.topLeftY) / geometry.side;
-            // ピクセル基準の端スナップ（拡大縮小やHiDPIでも安定）
-            const snapPx = Math.max(2, geometry.side * 0.01); // 最小2px or 1%
+            
+            // ピクセル基準の端スナップ（scale正規化済み座標系で判定）
+            const snapPx = Math.max(2 / scale, geometry.side * 0.01); // 最小2px（画面座標）or 1%
             const leftDist = x - geometry.topLeftX;
             const rightDist = (geometry.topLeftX + geometry.side) - x;
             const topDist = y - geometry.topLeftY;
             const bottomDist = (geometry.topLeftY + geometry.side) - y;
-            // s (0..1)
+            
+            // s (0..1): 左端=0, 右端=1
             if (leftDist <= snapPx) s = 0;
             else if (rightDist <= snapPx) s = 1;
             else s = clamp(relX, 0, 1);
-            // v (0..1) 上=1, 下=0
+            
+            // v (0..1): 上=1, 下=0
             if (topDist <= snapPx) v = 1;
             else if (bottomDist <= snapPx) v = 0;
             else v = 1 - clamp(relY, 0, 1);
+            
             updatePreview();
             return true;
         }
