@@ -2,6 +2,9 @@
 
 高精度な RGB/HSV/Alpha カラーピッカーを ComfyUI のカスタムノードとして提供します。
 
+## リポジトリ
+- GitHub: https://github.com/TJ16th/TJ_ComfyUI_ColorUtility
+
 ## 特長
 - 色相環 + 中央 SV 正方形 (ピクセル単位 HSV→RGB 変換により端の純白/純黒を保証)
 - アルファバー + RGBA プレビュー (チェック柄背景)
@@ -19,6 +22,12 @@ git clone https://github.com/TJ16th/TJ_ComfyUI_ColorUtility.git tj_ComfyUIUtil
 2. ComfyUI を再起動。
 3. ノード検索で `RGB Color Picker` を追加。
 
+### 既存クローンのアップデート
+```powershell
+cd <ComfyUI>/custom_nodes/tj_ComfyUIUtil
+git pull --ff-only
+```
+
 ## 使い方
 - RGB スライダーはピッカー操作で自動更新されます。
 - 色相：リング部分をドラッグ
@@ -27,6 +36,13 @@ git clone https://github.com/TJ16th/TJ_ComfyUI_ColorUtility.git tj_ComfyUIUtil
 - 出力:
   - `hex_color` : `#RRGGBB`
   - `hex_color_rgba` : `#RRGGBBAA`
+
+## スクリーンショット / 配線例
+下図はノードの外観と、2つの出力を `comfyui-custom-scripts / Show Text` に接続して値を表示している例です。
+
+![RGB Color Picker overview](docs/overview.png)
+
+> メモ: 上記画像は `docs/overview.png` を参照しています。お手元の環境で画像を差し替える場合は、`docs/overview.png` にスクリーンショットを配置してください。
 
 ## アップデート計画 (例)
 - キーボード操作対応
