@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+.venv/
+
+# ComfyUI cache/temp
+cache/
+logs/
+*.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node build artifacts (future-proof)
+dist/
+build/
+
+# Misc
+*.bak
+*.tmp
