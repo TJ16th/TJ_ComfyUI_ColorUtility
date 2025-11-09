@@ -36,12 +36,15 @@ class TestImagePaletteExtractor(unittest.TestCase):
         node = ImagePaletteExtractor()
         image = self._make_test_image()
         out = node.extract_palette(image, sample_max_pixels=50_000, seed=1)
-        self.assertEqual(len(out), 9)
+        self.assertEqual(len(out), 1)
         custom_json = out[0]
-        colors = out[1:]
         self.assertTrue(custom_json.startswith('{'))
-        self.assertEqual(len(colors), 8)
-        self.assertTrue(all(isinstance(c, str) and c.startswith('#') for c in colors))
+        # Verify JSON parsable and has 8 colors
+        import json
+        data = json.loads(custom_json)
+        self.assertIn('colors', data)
+        self.assertEqual(len(data['colors']), 8)
+        self.assertTrue(all(isinstance(c, str) and c.startswith('#') for c in data['colors']))
 
 
 if __name__ == '__main__':

@@ -125,9 +125,8 @@ def _hex_from_rgb01(rgb: np.ndarray) -> str:
 
 class ImagePaletteExtractor:
     """
-    Extract 8 representative colors from an IMAGE and output:
-    - custom_json: {"colors":["#RRGGBB", ...]} (8 colors)
-    - color_0 .. color_7: each #RRGGBB
+    Extract 8 representative colors from an IMAGE and output only a JSON string:
+    custom_json = {"colors":["#RRGGBB", ...]} (8 colors)
     """
 
     @classmethod
@@ -142,8 +141,8 @@ class ImagePaletteExtractor:
             }
         }
 
-    RETURN_TYPES = tuple(["STRING"] * 9)
-    RETURN_NAMES = ("custom_json",) + tuple([f"color_{i}" for i in range(8)])
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("custom_json",)
     FUNCTION = "extract_palette"
     CATEGORY = "TJnodes/color"
 
@@ -242,7 +241,7 @@ class ImagePaletteExtractor:
             order = np.argsort(-counts)  # frequency
         return centers_rgb[order], counts[order]
 
-    def extract_palette(self, image, sample_max_pixels: int = 100_000, merge_delta: float = 6.0, seed: int = 42, sort: str = "frequency") -> Tuple[str, str, str, str, str, str, str, str, str]:
+    def extract_palette(self, image, sample_max_pixels: int = 100_000, merge_delta: float = 6.0, seed: int = 42, sort: str = "frequency") -> Tuple[str]:
         arr = self._to_numpy_rgb01(image)
         samples = self._downsample_or_sample(arr, sample_max_pixels, seed)
         lab = _rgb_to_lab(samples)
@@ -263,4 +262,4 @@ class ImagePaletteExtractor:
         while len(hexes) < k:
             hexes.append("#000000")
         custom_json = json.dumps({"colors": hexes}, ensure_ascii=False)
-        return (custom_json, *hexes[:k])
+        return (custom_json,)

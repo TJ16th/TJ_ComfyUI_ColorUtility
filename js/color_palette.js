@@ -123,6 +123,25 @@ app.registerExtension({
             const r = onDrawForeground?.apply(this, arguments);
             const ui = attachPaletteUI(this);
             positionChips(this, ui.container);
+            
+            // custom の場合は custom_json を毎フレーム監視して即時更新
+            const presetWidget = this.widgets?.find(w => w.name === 'preset');
+            const customWidget = this.widgets?.find(w => w.name === 'custom_json');
+            if (presetWidget && presetWidget.value === 'custom' && customWidget) {
+                const currentText = customWidget.value || '';
+                if (this.__last_custom_text__ !== currentText) {
+                    this.__last_custom_text__ = currentText;
+                    const colors = parseCustomColors(currentText);
+                    if (colors) {
+                        this.__palette_colors__ = colors;
+                        setErrorVisual(this, false);
+                    } else {
+                        this.__palette_colors__ = null;
+                        setErrorVisual(this, !!currentText.trim());
+                    }
+                }
+            }
+            
             updateChips(this, ui.chips);
             return r;
         };
