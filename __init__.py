@@ -1,16 +1,19 @@
 from .rgb_color_picker import RGBColorPicker
 from .color_palette import ColorPalette
+from .image_palette_extractor import ImagePaletteExtractor
 from aiohttp import web
 import server
 
 NODE_CLASS_MAPPINGS = {
     "RGBColorPicker": RGBColorPicker,
     "ColorPalette": ColorPalette,
+    "ImagePaletteExtractor": ImagePaletteExtractor,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "RGBColorPicker": "RGB Color Picker",
     "ColorPalette": "Color Palette",
+    "ImagePaletteExtractor": "Image Palette Extractor",
 }
 
 # Serve frontend JS from the js/ folder
