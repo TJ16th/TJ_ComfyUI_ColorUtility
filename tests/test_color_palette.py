@@ -34,11 +34,28 @@ class TestColorPalette(unittest.TestCase):
         self.assertEqual(colors[7], "#000000")  # black end
 
     def test_get_palette_output(self):
-        """get_palette が8要素のタプルを返す"""
+        """get_palette が8要素のタプルを返す (既存プリセット)"""
         result = self.node.get_palette("primary")
         self.assertIsInstance(result, tuple)
         self.assertEqual(len(result), 8)
         self.assertTrue(all(isinstance(c, str) for c in result))
+
+    def test_get_palette_custom_inline(self):
+        """custom_json 文字列経由でカスタム8色が取得できる"""
+        custom_json = '{"colors":["#112233","#445566","#778899","#AABBCC","#DDEEFF","#123456","#654321","#FEDCBA"]}'
+        result = self.node.get_palette("custom", custom_json)
+        self.assertEqual(len(result), 8)
+        self.assertEqual(result[0], "#112233")
+        self.assertEqual(result[-1], "#FEDCBA")
+
+    def test_get_palette_custom_short(self):
+        """8色未満は #000000 でパディング"""
+        custom_json = '{"colors":["#000000","#FFFFFF"]}'
+        result = self.node.get_palette("custom", custom_json)
+        self.assertEqual(len(result), 8)
+        self.assertEqual(result[0], "#000000")
+        self.assertEqual(result[1], "#FFFFFF")
+        self.assertEqual(result[2], "#000000")  # padded
 
     def test_nonexistent_preset_fallback(self):
         """存在しないプリセットはフォールバックで8色を返す"""

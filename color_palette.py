@@ -9,12 +9,14 @@ from typing import Tuple
 class ColorPalette:
     """
     ComfyUI custom node: ColorPalette
-    - Input: preset (選択式: primary, pastel, gansai, monochrome, またはカスタム)
-    - Output: color_1 ~ color_16 (各 #RRGGBB)
+    - Input:
+        preset: primary / pastel / gansai / monochrome / custom
+        custom_json: (preset == custom の場合のみ使用) {"colors":["#RRGGBB", ...]} 形式（最大8色）
+    - Output: color_0 ~ color_7 (各 #RRGGBB)
     - Category: TJnodes/color
-    
+
     パレットは palettes/ フォルダの JSON から読み込み。
-    ユーザーは独自 JSON を追加可能。
+    custom 選択時は custom_json の内容を直接使用。
     """
 
     def __init__(self):
@@ -23,17 +25,20 @@ class ColorPalette:
 
     @classmethod
     def INPUT_TYPES(cls):
-        # palettes/ から利用可能なプリセットを列挙
+        # palettes/ から利用可能なプリセットを列挙 + custom
         instance = cls()
         presets = instance.list_presets()
+        if "custom" not in presets:
+            presets.append("custom")
         return {
             "required": {
                 "preset": (presets, {"default": presets[0] if presets else "primary"}),
+                "custom_json": ("STRING", {"multiline": True, "default": '{"colors":["#FF0000","#00FF00","#0000FF","#FFFF00","#FF00FF","#00FFFF","#FFFFFF","#000000"]}'})
             }
         }
 
     RETURN_TYPES = tuple(["STRING"] * 8)
-    RETURN_NAMES = tuple([f"color_{i+1}" for i in range(8)])
+    RETURN_NAMES = tuple([f"color_{i}" for i in range(8)])
     FUNCTION = "get_palette"
     CATEGORY = "TJnodes/color"
 
@@ -74,7 +79,34 @@ class ColorPalette:
             # エラー時フォールバック
             return [f"#{i*32:02X}{i*32:02X}{i*32:02X}" for i in range(8)]
 
-    def get_palette(self, preset: str) -> Tuple[str, ...]:
-        """プリセットから16色を取得して返す"""
-        colors = self.load_palette(preset)
+    def _parse_custom(self, custom_json: str) -> list[str]:
+        """custom_json 文字列を解析して #RRGGBB リスト(最大8)を返す。失敗時はグレー階調。"""
+        try:
+            data = json.loads(custom_json)
+            raw = data.get("colors", [])
+            colors: list[str] = []
+            for c in raw:
+                if not isinstance(c, str):
+                    continue
+                c = c.strip()
+                if len(c) == 7 and c.startswith("#"):
+                    # 16進検証
+                    h = c[1:]
+                    if all(ch in "0123456789abcdefABCDEF" for ch in h):
+                        colors.append("#" + h.upper())
+                if len(colors) >= 8:
+                    break
+            while len(colors) < 8:
+                colors.append("#000000")
+            return colors[:8]
+        except Exception as e:
+            print(f"[ColorPalette] custom_json parse error: {e}")
+            return [f"#{i*32:02X}{i*32:02X}{i*32:02X}" for i in range(8)]
+
+    def get_palette(self, preset: str, custom_json: str = "") -> Tuple[str, ...]:
+        """プリセットから8色を取得して返す。preset==custom の場合 custom_json を解析。"""
+        if preset == "custom":
+            colors = self._parse_custom(custom_json)
+        else:
+            colors = self.load_palette(preset)
         return tuple(colors)

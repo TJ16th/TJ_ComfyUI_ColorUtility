@@ -74,6 +74,35 @@ function updateChips(node, chips) {
     }
 }
 
+function parseCustomColors(text) {
+    try {
+        if (!text || !text.trim()) return null;
+        const data = JSON.parse(text);
+        const arr = Array.isArray(data) ? data : data.colors;
+        if (!Array.isArray(arr)) return null;
+        const out = [];
+        for (const c of arr) {
+            if (typeof c !== 'string') continue;
+            const v = c.trim().toUpperCase();
+            if (/^#[0-9A-F]{6}$/.test(v)) {
+                out.push(v);
+                if (out.length >= 8) break;
+            }
+        }
+        if (!out.length) return null;
+        while (out.length < 8) out.push('#000000');
+        return out.slice(0, 8);
+    } catch {
+        return null;
+    }
+}
+
+function setErrorVisual(node, on) {
+    const ui = node.__palette_ui__;
+    if (!ui) return;
+    ui.container.style.outline = on ? '2px solid #f55' : 'none';
+}
+
 function attachPaletteUI(node) {
     if (node.__palette_ui__) return node.__palette_ui__;
     
@@ -102,6 +131,57 @@ app.registerExtension({
         nodeType.prototype.onNodeCreated = function() {
             const r = onNodeCreated?.apply(this, arguments);
             attachPaletteUI(this);
+            
+            // widget 参照
+            const presetWidget = this.widgets?.find(w => w.name === 'preset');
+            const customWidget = this.widgets?.find(w => w.name === 'custom_json');
+
+            const refreshFromWidgets = async () => {
+                const preset = presetWidget?.value;
+                if (!preset) return;
+                if (preset === 'custom') {
+                    const colors = parseCustomColors(customWidget?.value || '');
+                    if (colors) {
+                        this.__palette_colors__ = colors;
+                        setErrorVisual(this, false);
+                        updateChips(this, this.__palette_ui__.chips);
+                    } else {
+                        this.__palette_colors__ = null;
+                        setErrorVisual(this, !!(customWidget?.value && customWidget.value.trim()))
+                        updateChips(this, this.__palette_ui__.chips);
+                    }
+                } else {
+                    // プリセットはサーバーから即時取得
+                    try {
+                        const response = await fetch('/tj_comfyuiutil/palette', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ preset })
+                        });
+                        if (response.ok) {
+                            const colors = await response.json();
+                            this.__palette_colors__ = colors;
+                            setErrorVisual(this, false);
+                            updateChips(this, this.__palette_ui__.chips);
+                        }
+                    } catch (e) {
+                        console.error(`[${EXT_NAME}] Failed to fetch palette:`, e);
+                    }
+                }
+            };
+
+            // コールバックを装着
+            if (presetWidget) {
+                const orig = presetWidget.callback;
+                presetWidget.callback = (v) => { refreshFromWidgets(); orig?.call(presetWidget, v); };
+            }
+            if (customWidget) {
+                const orig = customWidget.callback;
+                customWidget.callback = (v) => { refreshFromWidgets(); orig?.call(customWidget, v); };
+            }
+            // 初期
+            refreshFromWidgets();
+            
             return r;
         };
         
